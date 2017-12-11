@@ -20060,7 +20060,9 @@ PHp0u%!j0000806LatN$y5^m0m3X0LEPa02%-Q00000000000HlEirV;>fX>ct$E-)@JE@WwQbS-IaW
 
 import sys
 import os
+import ast
 import platform
+import ctypes
 
 #Python 2 vs 3 inconsistencies
 try:
@@ -20072,9 +20074,47 @@ try:
 except NameError:
    pass
 
-import importlib
-if hasattr(importlib, 'reload'):
-    reload = importlib.reload
+python_version = platform.python_version()
+self_path = os.path.realpath(sys.argv[0])
+if self_path[-1] == 'c': self_path = self_path[:-1]
+self_import_name = __file__.split('.')[0]
+
+#Mac vs Windows inconsistencies
+if sys.platform == 'win32':
+    has_elevated_privileges = ctypes.windll.shell32.IsUserAnAdmin() != 0
+elif sys.platform in ['darwin', 'linux']:
+    has_elevated_privileges = os.getuid() == 0
+#TODO I have no idea how cygwin works and it's the last sys platform
+
+def elevate():
+    if sys.platform == 'win32':
+        import string
+        import random
+        possible_chars = string.ascii_lowercase + string.digits
+        
+        def generate_filename():
+            while True:
+                temp_name = []
+                for i in range(10):
+                    temp_name.append(random.choice(possible_chars))
+                temp_name = (''.join(temp_name) + '.bat')
+                if not os.path.isfile(temp_name): break
+            return temp_name
+
+        temp_filename = generate_filename()
+        full_temp_path = os.path.realpath(temp_filename)
+        with open(temp_filename, 'w') as f:
+            f.write("\"%s\" \"%s\"" % (sys.executable, self_path))
+            f.write("\n@echo off\nstart /b "" cmd /c del \"%s\"&exit /b" % full_temp_path)
+        elevate_command = "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/k \\\"%s\\\"'\"" % full_temp_path
+        os.system(elevate_command)
+    elif sys.platform == 'darwin':
+        elevate_command = "osascript -e 'tell application \"Terminal\" to activate & do script \"sudo %s %s\"'" % (sys.executable, self_path)
+        os.system(elevate_command)
+    elif sys.platform == "cygwin":
+        print("Start cygwin as an administrator, and re-run this file to continue.")
+    elif sys.platform == "linux":
+        print("Run the command\nsudo %s %s\n is Terminal to continue" % (sys.executable, self_path))
 
 #Temporarily redirects stdout for capturing the output of pip install
 class capture_output(object):
@@ -20107,7 +20147,135 @@ troubleshooting_links = {
     "pyserial":
     "https://rbhard.gitbooks.io/arduino-module-manual/content/chapter1.html",
 }
-python_version = platform.python_version()
+
+def set_pip_name(package_name, pip_install_name):
+    pip_names[package_name] = pip_install_name
+
+def ensure_install(package_name):
+    import_string = "import %s" % (package_name)
+    #We need to compile and exec 'import module' rather than eval it since it's
+    #a statement, not an expression
+    import_code_object = compile(import_string, '<string>', 'exec')
+    pip_install_name = pip_names.get(package_name, package_name)
+
+    try:
+        exec(import_code_object)
+    except ImportError:
+        print("Failed to import module '%s' to Python %s." %
+              (package_name, python_version))
+        user_action = ''
+
+        while not user_action.lower() in ['q', 'i']:
+            user_action = input("Press q to quit, or i to %sinstall %s: "
+                                % ("rerun this file as an\nadministrator in a "
+                                   "new window and " if not
+                                   has_elevated_privileges else "",
+                                   package_name))
+        if user_action.lower() == "q": sys.exit()
+
+        if not has_elevated_privileges:
+            elevate()
+            #TODO ask for feedback, do something cleaner than just exit
+            sys.exit()
+
+        else:
+            print("Attempting to install %s to Python %s" %
+                  (package_name, python_version))
+
+            pip_error = (pip.main(['install', pip_install_name]) != 0)
+
+            if pip_error:
+                #This isn't clean at all, but it works for now
+                with capture_output() as pip_output:
+                    (pip.main(['install', pip_install_name]) != 0)
+
+                if "No matching distribution found for" in pip_output[0]:
+                    print("\nPip was unable to find the module '%s'. Some packages "
+                          "are imported with different names than you install them "
+                          "with. Once you find the name that you should use to "
+                          "pip install the package, you can write the line\n"
+                          "module_help.set_pip_name('%s', 'pip_package_name')\n"
+                          "directly below\nimport module_help\n"
+                          "to make sure module_help tries to import the module "
+                          "with the right name." %
+                          (package_name, package_name))
+                elif "Permission denied" in pip_output[0]:
+                    print("\nPip encountered a 'permission denied' error "
+                          "installing the module '%s' to Python %s. Try running "
+                          "this file as an administrator in Terminal with the line "
+                          "\n sudo %s %s \nand then re-running. " %
+                          (package_name, python_version, sys.executable, self_path))
+                elif "Access is denied" in pip_output[0]:
+                    print("\nPip encountered a 'access is denied' error installing "
+                          "the module '%s' to Python %s. Try opening command "
+                          "prompt as an administrator, running the line "
+                          "\n%s %s \nand then re-running this file. " %
+                          (package_name, python_version, sys.executable, self_path))
+                elif "Operation not permitted" in pip_output[0] and \
+                     python_version.split('.')[0] == '2':
+                    print("\nPip encountered an 'operation not permitted' error "
+                          "installing the module '%s' to Python %s. Sometimes, "
+                          "this error can be fixed by installing Python 2.7 using "
+                          "homebrew instead of using\nmacOS's built in Python "
+                          "distribution. Instructions for installing homebrew "
+                          "are here https://brew.sh/.\nIf that doesn't work, you "
+                          "may also need to uninstall and reinstall pip. You "
+                          "can uninstall pip by running the line\n"
+                          "sudo %s -m pip uninstall pip\nin Terminal, and "
+                          "reinstall it by running this file again as normal."
+                          %(package_name, python_version, sys.executable))
+                else:
+                    if package_name in troubleshooting_links:
+                        link_tip = ("\n\nYou can also check out the installation "
+                                    "section of the module manual for %s here: %s"
+                                    % (package_name,
+                                       troubleshooting_links[package_name]))
+                    else:
+                        link_tip = ""
+                    print("\nPip encountered an error installing the module '%s' "
+                          "to Python %s. Try searching for your exact install "
+                          "error online and troubleshooting from there, or asking "
+                          "a TA for help!\n%s" %
+                          (package_name, python_version, link_tip))
+                sys.exit()
+
+            try:
+                exec(import_code_object)
+            except ImportError:
+                if package_name in troubleshooting_links:
+                    link_tip = ("\nYou can also check out the installation "
+                                "section of the module manual for %s here: %s\n"
+                                % (package_name,
+                                   troubleshooting_links[package_name]))
+                else:
+                    link_tip = ""
+                print("\nHm, we're not sure what went wrong. The package installed "
+                      "successfully but we still can't import it. The error is "
+                      "printed below. Try searching for that error, or asking a TA "
+                      "for help.\n\nIf you were successfully importing code in %s "
+                      "and you're having trouble in Pyzo, try clicking on the "
+                      "button in the upper left hand corner of the shell, clicking "
+                      "'Edit shell configurations' and making sure that the path "
+                      "in the 'exe' field of the version you're currently running "
+                      "exactly matches the path that appears when you run '%s %s' "
+                      "in %s. If they don't match, usually the solution is to "
+                      "change the path in Pyzo to match. Depending on the "
+                      "situation, you might want to pip uninstall the package, "
+                      "clear pip's cache, and then rerun this program.\n"
+                      "%s"
+                      %("Command Prompt" if os.name == 'nt' else "Terminal",
+                        "where" if os.name == 'nt' else "which", "python" if \
+                        python_version.split('.')[0] == '2' else "python3",
+                        "Command Prompt" if os.name == 'nt' else "Terminal",
+                        link_tip))
+                exec(import_code_object)
+                sys.exit()
+
+            return False
+    return True
+
+# Make sure pip is installed before anything else. If it's not, install it
+# and quit
 
 try:
     import pip
@@ -20118,149 +20286,64 @@ except ImportError:
           "pip." % (python_version))
     user_action = ''
     while not user_action.lower() in ['q', 'i']:
-        user_action = input("Press q to quit, or i to install pip: ")
+        user_action = input("Press q to quit, or i to %sinstall pip: "
+                            % ("rerun this file as an\nadministrator in a new "
+                               "window and " if not has_elevated_privileges
+                               else ""))
     if user_action.lower() == "q": sys.exit()
 
-    pip_error = (get_pip() != 0)
-    if pip_error:
-        self_path = os.path.realpath(sys.argv[0])
-        if self_path[-1] == 'c': self_path = self_path[:-1]
-        if os.name == 'nt':
+    if has_elevated_privileges:
+        pip_error = (get_pip() != 0)
+        if pip_error:
             print("\nEncountered an error installing pip "
-                  "to Python %s. If you're getting an access denied "
-                  "error, try opening command prompt \nas an administrator "
-                  "runing the line "
-                  "\n%s %s \nand then re-running this file. "
-                  "Otherwise, try searching for your exact install "
-                  "error online and troubleshooting from there, \nor asking "
-                  "a TA for help!" %
-                  (python_version, sys.executable, self_path))
-        else:
-            print("\nEncountered an error installing pip "
-                  "to Python %s. If you're getting a permission denied "
-                  "error, try\nrunning this file as an administrator in "
-                  "Terminal with the line "
-                  "\nsudo %s %s \nand then re-running. "
-                  "Otherwise, try searching for your exact install "
+                  "to Python %s. Try searching for your exact install "
                   "error online and troubleshooting from\nthere, or asking "
                   "a TA for help!" %
-                  (python_version, sys.executable, self_path))
-        sys.exit()
+                  (python_version))
+            sys.exit(1)
+        else:
+            print("If this is an auto-generated window, you can exit now.")
+            sys.exit()
     else:
-        print("Quitting to let pip finish setting up. Rerun your file "
-              "to continue.")
-        sys.exit()
-
-def ensure_install(package_name, pip_install_name = None):
-    import_string = "import %s" % (package_name)
-    #We need to compile and exec 'import module' rather than eval it since it's
-    #a statement, not an expression
-    import_code_object = compile(import_string, '<string>', 'exec')
-
-    if not pip_install_name:
-        pip_install_name = pip_names.get(package_name, package_name)
-
-    try:
-        exec(import_code_object)
-    except ImportError:
-        print("Failed to import module '%s' to Python %s." %
-              (package_name, python_version))
+        elevate()
         user_action = ''
-
-        while not user_action.lower() in ['q', 'i']:
-            user_action = input("Press q to quit, or i to install %s: " %
-                                (package_name))
-        if user_action.lower() == "q": sys.exit()
-
-        print("Attempting to install %s to Python %s" %
-              (package_name, python_version))
-
-        pip_error = (pip.main(['install', pip_install_name]) != 0)
-
-        if pip_error:
-            #This isn't clean at all, but it works for now
-            with capture_output() as pip_output:
-                (pip.main(['install', pip_install_name]) != 0)
-
-            if "No matching distribution found for" in pip_output[0]:
-                print("\nPip was unable to find the module '%s'. Some packages "
-                      "are imported with different names than you install them "
-                      "with. Once you find the name that you should use to "
-                      "pip install the package, you can run ensure_install "
-                      "as ensure_install('%s', 'pip_package_name')." %
-                      (package_name, package_name))
-            elif "Permission denied" in pip_output[0]:
-                self_path = os.path.realpath(sys.argv[0])
-                if self_path[-1] == 'c': self_path = self_path[:-1]
-                print("\nPip encountered a 'permission denied' error "
-                      "installing the module '%s' to Python %s. Try running "
-                      "this file as an administrator in Terminal with the line "
-                      "\n sudo %s %s \nand then re-running. " %
-                      (package_name, python_version, sys.executable, self_path))
-            elif "Access is denied" in pip_output[0]:
-                self_path = os.path.realpath(sys.argv[0])
-                if self_path[-1] == 'c': self_path = self_path[:-1]
-                print("\nPip encountered a 'access is denied' error installing "
-                      "the module '%s' to Python %s. Try opening command "
-                      "prompt as an administrator, running the line "
-                      "\n%s %s \nand then re-running this file. " %
-                      (package_name, python_version, sys.executable, self_path))
-            elif "Operation not permitted" in pip_output[0] and \
-                 python_version.split('.')[0] == '2':
-                print("\nPip encountered an 'operation not permitted' error "
-                      "installing the module '%s' to Python %s. Sometimes, "
-                      "this error can be fixed by installing Python 2.7 using "
-                      "homebrew instead of using\nmacOS's built in Python "
-                      "distribution. Instructions for installing homebrew "
-                      "are here https://brew.sh/.\nIf that doesn't work, you "
-                      "may also need to uninstall and reinstall pip. You "
-                      "can uninstall pip by running the line\n"
-                      "sudo %s -m pip uninstall pip\nin Terminal, and "
-                      "reinstall it by running this file again as normal."
-                      %(package_name, python_version, sys.executable))
-            else:
-                if package_name in troubleshooting_links:
-                    link_tip = ("\n\nYou can also check out the installation "
-                                "section of the module manual for %s here: %s"
-                                % (package_name,
-                                   troubleshooting_links[package_name]))
-                else:
-                    link_tip = ""
-                print("\nPip encountered an error installing the module '%s' "
-                      "to Python %s. Try searching for your exact install "
-                      "error online and troubleshooting from there, or asking "
-                      "a TA for help!\n%s" %
-                      (package_name, python_version, link_tip))
+        while not user_action.lower() in ['s', 'e']:
+            user_action = input("Press s if pip installed successfully, or e "
+                                "if pip encountered an installation error: ")
+        if user_action.lower() == "f":
+            print("Refer to the error messages in the new window for "
+                  "troubleshooting help")
             sys.exit()
-
         try:
-            exec(import_code_object)
+            import pip
         except ImportError:
-            if package_name in troubleshooting_links:
-                link_tip = ("\nYou can also check out the installation "
-                            "section of the module manual for %s here: %s\n"
-                            % (package_name,
-                               troubleshooting_links[package_name]))
-            else:
-                link_tip = ""
-            print("\nHm, we're not sure what went wrong. The package installed "
-                  "successfully but we still can't import it. The error is "
-                  "printed below. Try searching for that error, or asking a TA "
-                  "for help.\n\nIf you were successfully importing code in %s "
-                  "and you're having trouble in Pyzo, try clicking on the "
-                  "button in the upper left hand corner of the shell, clicking "
-                  "'Edit shell configurations' and making sure that the path "
-                  "in the 'exe' field of the version you're currently running "
-                  "exactly matches the path that appears when you run '%s %s' "
-                  "in %s. If they don't match, usually the solution is to "
-                  "change the path in Pyzo to match. Depending on the "
-                  "situation, you might want to pip uninstall the package, "
-                  "clear pip's cache, and then rerun this program.\n"
-                  "%s"
-                  %("Command Prompt" if os.name == 'nt' else "Terminal",
-                    "where" if os.name == 'nt' else "which", "python" if \
-                    python_version.split('.')[0] == '2' else "python3",
-                    "Command Prompt" if os.name == 'nt' else "Terminal",
-                    link_tip))
-            exec(import_code_object)
-            sys.exit()
+            print("It seems like something went wrong trying to install pip "
+                  "to Python %s. Try searching for your exact install "
+                  "error online and troubleshooting from\nthere, or asking "
+                  "a TA for help!" %
+                  (python_version))
+            sys.exit(1)
+
+#Get a list of modules imported into the caller function
+def review():
+    self_code = ""
+    with open(self_path, 'r') as f:
+        self_code = ''.join(f.readlines())
+
+    imports = []
+
+    ast_tree = ast.parse(self_code)
+    for node in ast.walk(ast_tree):
+        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+            for node_alias in node.names:
+                imports.append(node_alias.name)
+
+    all_success = True
+    for module in imports:
+        all_success &= ensure_install(module)
+
+    if not all_success:
+        print("All modules installed successfully! If this is an "
+              "autogenerated window, you can close it now. Rerun your main "
+              "file to continue.")
+        sys.exit()
