@@ -20144,9 +20144,14 @@ def elevate():
 
         temp_filename = generate_filename()
         full_temp_path = os.path.realpath(temp_filename)
+
         with open(temp_filename, 'w') as f:
             f.write("\"%s\" \"%s\"" % (sys.executable, self_path))
-            f.write("\n@echo off\nstart /b "" cmd /c del \"%s\"&exit /b" % full_temp_path)
+            #/A lets us delete hidden files
+            f.write("\n@echo off\nstart /b "" cmd /c del /A \"%s\"&exit /b" % full_temp_path)
+        #Makes our temporary bat file a hidden file
+        ctypes.windll.kernel32.SetFileAttributesW(full_temp_path, 0x02)
+
         elevate_command = "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/k \\\"%s\\\"'\"" % full_temp_path
         subprocess.Popen(elevate_command, shell = True, stdout = DEVNULL, stderr = DEVNULL)
     elif sys.platform == 'darwin':
@@ -20159,8 +20164,8 @@ def elevate():
         print("Run the command\nsudo %s %s\n is Terminal to continue" % (sys.executable, self_path))
 
 def print_intro():
-    blue_color = '\033[94m'
-    end_color = '\033[0m'
+    blue_color = '\033[94m' if not sys.platform == "win32" else ""
+    end_color = '\033[0m' if not sys.platform == "win32" else ""
     global intro_printed
     if not intro_printed:
         print(blue_color + """
@@ -20204,7 +20209,8 @@ help!"""
             else:
                 print("""
 If module manager opened this window automatically, you can close it now.
-Answer "s" to the prompt in the old window, and rerun your file to continue.""")
+Answer "s" to the prompt in the old window, and follow along with the rest of
+the instructions.""")
                 sys.exit()
         else:
             elevate()
@@ -20263,8 +20269,8 @@ pip install error fixed!""")
             elevate()
             user_action = ''
             while not user_action.lower() in ['y', 'n']:
-                user_action = input(
-"""Press y if the new window opened successfully, or n if the new window failed
+                user_action = input("""
+Press y if the new window opened successfully, or n if the new window failed
 to open: """)
             if user_action.lower() == "n":
                 if sys.platform == "win32":
@@ -20391,10 +20397,10 @@ running
 in %s, and then rerun this program.
 %s""" %
 (e,
-"Command Prompt" if os.name == 'nt' else "Terminal",
-"where" if os.name == 'nt' else "which", "python" if \
+"Command Prompt" if sys.platform == 'win32' else "Terminal",
+"where" if sys.platform == 'win32' else "which", "python" if \
 python_version.split('.')[0] == '2' else "python3",
-"Command Prompt" if os.name == 'nt' else "Terminal",
+"Command Prompt" if sys.platform == 'win32' else "Terminal",
 "sudo " if sys.platform in ['darwin', 'linux'] else "",
 sys.executable, pip_install_name,
 "Terminal" if sys.platform in ['darwin', 'linux'] else
