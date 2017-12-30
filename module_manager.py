@@ -20155,7 +20155,8 @@ def elevate():
         elevate_command = "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/k \\\"%s\\\"'\"" % full_temp_path
         subprocess.Popen(elevate_command, shell = True, stdout = DEVNULL, stderr = DEVNULL)
     elif sys.platform == 'darwin':
-        elevate_command = "osascript -e 'tell application \"Terminal\" to activate & do script \"sudo %s %s\"'" % (sys.executable, self_path)
+        #elevate_command = "osascript -e 'tell application \"Terminal\" to activate & do script \"sudo %s %s\"'" % (sys.executable, self_path)
+        elevate_command = "osascript -e 'if application \"Terminal\" is running then' -e 'tell application \"Terminal\"' -e 'do script \"sudo %s %s\"' -e 'activate' -e 'end tell' -e 'else' -e 'tell application \"Terminal\"' -e 'reopen' -e 'do script \"sudo %s %s\" in window 1' -e 'activate' -e 'end tell' -e 'end if'" % (sys.executable, self_path, sys.executable, self_path)
         subprocess.Popen(elevate_command, shell = True, stdout = DEVNULL, stderr = DEVNULL)
     elif sys.platform == "cygwin":
         print("Start cygwin as an administrator, and re-run this file to continue.")
@@ -20283,7 +20284,7 @@ and then re-running this file. """
                 elif sys.platform in ["darwin", "linux"]:
                     print("""
 Sorry! We're not sure why the new window didn't appear. Try running this file
-as an administrator administrator in Terminal with the line "
+as an administrator administrator in Terminal with the line
 sudo %s %s
 and then re-running this file. """
 % (sys.executable, self_path))
