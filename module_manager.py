@@ -20171,13 +20171,13 @@ def elevate():
         elevate_command = "powershell -Command \"Start-Process cmd -Verb RunAs -ArgumentList '/k \\\"%s\\\"'\"" % full_temp_path
         subprocess.Popen(elevate_command, shell = True, stdout = DEVNULL, stderr = DEVNULL)
     elif sys.platform == 'darwin':
-        elevate_command = "osascript -e 'if application \"Terminal\" is running then' -e 'tell application \"Terminal\"' -e 'do script \"sudo %s %s\"' -e 'activate' -e 'end tell' -e 'else' -e 'tell application \"Terminal\"' -e 'reopen' -e 'do script \"sudo %s %s\" in window 1' -e 'activate' -e 'end tell' -e 'end if'" % (sys.executable, self_path, sys.executable, self_path)
+        elevate_command = "osascript -e 'if application \"Terminal\" is running then' -e 'tell application \"Terminal\"' -e 'do script \"sudo \\\"%s\\\" \\\"%s\\\"\"' -e 'activate' -e 'end tell' -e 'else' -e 'tell application \"Terminal\"' -e 'reopen' -e 'do script \"sudo \\\"%s\\\" \\\"%s\\\"\" in window 1' -e 'activate' -e 'end tell' -e 'end if'" % (sys.executable, self_path, sys.executable, self_path)
         subprocess.Popen(elevate_command, shell = True, stdout = DEVNULL, stderr = DEVNULL)
     elif sys.platform == "cygwin":
         print("Start cygwin as an administrator, and re-run this file to continue.")
         #TODO Pretty sure this makes sense from Googling cygwin but ...
     elif sys.platform == "linux":
-        print("Run the command\nsudo \"%s\" \"%s\"\n is Terminal to continue" % (sys.executable, self_path))
+        print("Run the command\nsudo \"%s\" \"%s\"\n in Terminal to continue" % (sys.executable, self_path))
 
     #Printing completion message
     if sys.platform in ['win32', 'darwin']:
