@@ -20065,6 +20065,7 @@ import ast
 import platform
 import ctypes
 import subprocess
+import string
 
 #Python 2 vs 3 inconsistencies
 try:
@@ -20190,20 +20191,43 @@ and follow the instructions there to continue.""" %
 ))
     _exit()
 
+def check_safe_path():
+    safe_characters = set(string.ascii_lowercase + string.ascii_uppercase
+                      + string.digits + "-_. " + os.sep)
+    used_unsafe_characters = list(set(self_path).difference(safe_characters))
+
+    if len(used_unsafe_characters) > 0:
+        if len(used_unsafe_characters) == 1:
+            error_text = used_unsafe_characters[0]
+        else:
+            error_text = (", ".join(used_unsafe_characters[:-1]) + " and "
+                          + used_unsafe_characters[-1])
+
+        print("""
+It looks like the path that this file is currently running from:
+"%s"
+contains the special character%s %s,
+which will cause errors when trying to install modules. Please move this file
+to a new path without special characters, or rename the folder with the
+special characters, and then rerun your file.
+""" %
+(self_path, ("s" if len(used_unsafe_characters) > 1 else ""), error_text))
+        _exit()
+
 def check_executable():
     if 'w' in os.path.basename(os.path.normpath(sys.executable)):
         print("""
 It looks like you're running this file using pythonw, which runs with no input
 or output capabilities when executed from %s. Python's
 IDLE often runs code using pythonw. To continue, run this file in a different
-editor, or directly from Command Prompt.
+editor, or directly from %s.
 
 If you run this file in %s, we can't guarantee that
 the modules will be installed to the current version of Python, and that all of
 the imports will succeed when you run your code again here. We recommend that
 you consistently run your code in %s, or switch to a
 different editor. Pyzo or Sublime would be great!
-""" % (shell_name, shell_name, shell_name))
+""" % (shell_name, shell_name, shell_name, shell_name))
         _exit()
 
 def print_intro():
@@ -20226,6 +20250,7 @@ def ensure_pip():
     except ImportError:
         print_intro()
         check_executable()
+        check_safe_path()
         if not has_elevated_privileges: elevate()
 
         print("""
@@ -20272,6 +20297,7 @@ pip install error fixed!""")
     except ImportError:
         print_intro()
         check_executable()
+        check_safe_path()
         if not has_elevated_privileges: elevate()
 
         print("""
