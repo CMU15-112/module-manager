@@ -20180,14 +20180,24 @@ def elevate():
     elif sys.platform == "linux":
         print("Run the command\nsudo \"%s\" \"%s\"\n in Terminal to continue" % (sys.executable, self_path))
 
+    if (sys.platform == 'darwin'):
+        extra_note = """
+
+Note! If you type in your password and you don't see any characters appear,
+this is normal. It's to make sure nobody can see your password. Just type it
+in, press enter, and everything should work!
+"""
+    else:
+        extra_note = ""
+    
     #Printing completion message
     if sys.platform in ['win32', 'darwin']:
         print("""
 We're opening this file as an administrator in a new window in order to continue
 with the right permissions. %s,
-and follow the instructions there to continue.""" %
+and follow the instructions there to continue.%s""" %
 ("Type in your computer password in the new window" if sys.platform == 'darwin'
- else "Grant Command Prompt administrator access",
+ else "Grant Command Prompt administrator access", extra_note
 ))
     _exit()
 
