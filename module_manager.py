@@ -20203,7 +20203,7 @@ and follow the instructions there to continue.%s""" %
 
 def check_safe_path():
     safe_characters = set(string.ascii_lowercase + string.ascii_uppercase
-                      + string.digits + "-_. :" + os.sep)
+                      + string.digits + "-_. :()" + os.sep)
     used_unsafe_characters = list(set(self_path).difference(safe_characters))
 
     if len(used_unsafe_characters) > 0:
@@ -20345,7 +20345,10 @@ shell_name))
                 (pip.main(['install', pip_install_name]) != 0)
 
             if "No matching distribution found for" in pip_output[0]:
-                if " pil " in pip_output[0]:
+                if " opencv " in pip_output[0].lower():
+                    print("""
+Did you mean to write "import cv2" ?""")
+                elif " pil " in pip_output[0]:
                     print("""
 Did you mean to write "import PIL" ?""")
                 else:
