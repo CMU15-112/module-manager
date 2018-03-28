@@ -20189,7 +20189,7 @@ in, press enter, and everything should work!
 """
     else:
         extra_note = ""
-    
+
     #Printing completion message
     if sys.platform in ['win32', 'darwin']:
         print("""
@@ -20203,7 +20203,7 @@ and follow the instructions there to continue.%s""" %
 
 def check_safe_path():
     safe_characters = set(string.ascii_lowercase + string.ascii_uppercase
-                      + string.digits + "-_. " + os.sep)
+                      + string.digits + "-_. :" + os.sep)
     used_unsafe_characters = list(set(self_path).difference(safe_characters))
 
     if len(used_unsafe_characters) > 0:
