@@ -20498,15 +20498,6 @@ automatically, you can close it now. Rerun your file to continue.""")
         _exit()
 
 if __name__ == "__main__":
-    if len(sys.argv) > 0 and sys.argv[1] == "-i":
-        pip_error = (get_pip() != 0)
-        if pip_error:
-            print("""
-Encountered an error installing pip to Python %s. Try searching for your
-exact install error online and troubleshooting from there, or asking a TA for
-help!"""
-% (python_version))
-    else:
         print(
 """Hi! To use module manager, make sure that this file is in the same directory
 as your main project file, import it at the top of your file like this:
