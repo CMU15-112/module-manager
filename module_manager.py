@@ -1,7 +1,7 @@
 # module_manager.py: Troubleshooting the installation and importing of Python
 # modules
 # By Austin Schick
-# Last update: 21-Dec-2017
+# Last update: 1-Apr-2018
 
 # Note: This code includes a modified version of get_pip.py which can be
 # found at
