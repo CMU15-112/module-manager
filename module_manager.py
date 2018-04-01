@@ -20482,9 +20482,11 @@ def review():
 
     ast_tree = ast.parse(self_code)
     for node in ast.walk(ast_tree):
-        if isinstance(node, ast.Import) or isinstance(node, ast.ImportFrom):
+        if isinstance(node, ast.Import):
             for node_alias in node.names:
                 imports.append(node_alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            imports.append(node.module)
 
     imports = list(set(imports) - ignored_modules)
     no_import_errors = True
