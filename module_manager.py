@@ -20159,6 +20159,27 @@ def elevate():
                 if not os.path.isfile(temp_name): break
             return temp_name
 
+        # make sure that we have access to powershell
+        try:
+            import distutils.spawn
+            powershell_path = distutils.spawn.find_executable("powershell")
+            if powershell_path is None:
+                print("""
+We tried to open this file as an administrator in a new window, but we
+couldn't find powershell in your system path. Please ask a TA for help!
+
+TAs (or students): If the student is using Sublime, go to preferences >
+package settings > SublimeREPL > user. Then make sure that the line that
+looks something like like this:
+
+"default_extend_env": {"PATH":"{PATH}:C:\\Python35-32"}
+
+has the {PATH} part in it. If not, you can add it in and rerun this file.
+""")
+                _exit()
+        except:
+            pass
+
         temp_filename = generate_filename()
         full_temp_path = os.path.realpath(temp_filename)
 
