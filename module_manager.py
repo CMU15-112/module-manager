@@ -20488,7 +20488,8 @@ def review():
         elif isinstance(node, ast.ImportFrom):
             imports.append(node.module)
 
-    imports = list(set(imports) - ignored_modules)
+    imports = sorted((set(imports) - ignored_modules),
+                     key=lambda e: imports.index(e))
     no_import_errors = True
     for module in imports:
         no_import_errors &= ensure_install(module)
