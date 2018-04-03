@@ -1,7 +1,7 @@
 # module_manager.py: Troubleshooting the installation and importing of Python
 # modules
 # By Austin Schick
-# Last update: 1-Apr-2018
+# Last update: 3-Apr-2018
 
 # Note: This code includes a modified version of get_pip.py which can be
 # found at
@@ -20451,7 +20451,26 @@ You can also check out the installation section of the module manual for
 % (package_name, troubleshooting_links[package_name]))
             else:
                 link_tip = ""
-            print("""
+
+            if "mach-o, but wrong architecture" in str(e):
+                print("""
+It looks like the package installed successfull, but we're still getting this
+import error when trying to import it:
+
+ImportError: %s
+
+Since it's a "mach-o but wrong architecture" error, this probably means that
+pip installed the package successfully for a 64 bit machine, but you're
+running a 32 bit version of Python. Make sure that the version of Python that
+you're using (which can be seen in the 'exe' field of shell configurations in
+Pyzo) looks something like
+
+"/Library/Frameworks/Python.framework/Versions/3.6/bin/python3.6"
+rather than
+"/Library/Frameworks/Python.framework/Versions/3.6/bin/python3.6-32"
+""" % e)
+            else:
+                print("""
 Hm, we're not sure what went wrong. The package installed successfully but we
 still can't import it. The error is printed here:
 
