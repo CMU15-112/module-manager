@@ -20066,6 +20066,7 @@ import platform
 import ctypes
 import subprocess
 import string
+import struct
 
 #Python 2 vs 3 inconsistencies
 try:
@@ -20246,6 +20247,60 @@ special characters, and then rerun your file.
         _exit()
 
 def check_executable():
+    os_is_64_bit = platform.machine().endswith('64')
+    python_is_64_bit = (struct.calcsize("P") == 8)
+    (_,minor_version,_) = platform.python_version_tuple()
+    if 'conda' in sys.executable.lower():
+        print("""
+WARNING: It looks like you're running a version of Anaconda Python. Some
+modules see more installation errors on Anaconda, and Pygame specifically has
+trouble taking user input when run from Anaconda. We recommend downloading
+Python 3.6 from python.org, and using that Python distribution.
+""")
+        user_action = ''
+        while not user_action.lower() in ['q', 'u']:
+            user_action = input(
+"""Press u if you understood this warning and want to continue,
+or q to quit: """)
+        if user_action.lower() == "q": _exit()
+    if (minor_version == '5'):
+        print("""
+WARNING: It looks like you're running Python version 3.5.x. Some modules see
+more installation errors on this vesion of Python. We recommend downloading
+Python 3.6 from python.org, and using that Python distribution.
+""")
+        user_action = ''
+        while not user_action.lower() in ['q', 'u']:
+            user_action = input(
+"""Press u if you understood this warning and want to continue,
+or q to quit: """)
+        if user_action.lower() == "q": _exit()
+    if (os_is_64_bit and (not python_is_64_bit)):
+        print("""
+WARNING: It looks like you're on a 64 bit computer, and running a 32 bit
+version of Python. This can cause installation errors with some modules.
+We recommend switching to a 64 bit version of Python, which usually means
+switching from a Python executable that looks like this: "python3.6-32" to
+one that looks like this: "python3.6".
+""")
+        user_action = ''
+        while not user_action.lower() in ['q', 'u']:
+            user_action = input(
+"""Press u if you understood this warning and want to continue,
+or q to quit and display more troubleshooting tips: """)
+        if user_action.lower() == "q":
+            print("""
+To change your Python executable in Pyzo, go to the shell, select the button
+on the left that says something like "Python," and click
+"Edit shell configurations". Then in the "exe" dropdown, look for an
+executable that ends with "python3.6".
+
+If you're running Sublime, work with a TA at office hours to figure out how
+you're calling Python from within the python-with-ui-options file, and how
+you should change your path so that a 64 bit version of Python runs instead
+of the 32 bit version.
+""")
+            _exit()
     if 'w' in os.path.basename(os.path.normpath(sys.executable)):
         print("""
 It looks like you're running this file using pythonw, which runs with no input
