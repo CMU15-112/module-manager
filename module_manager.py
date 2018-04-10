@@ -20301,6 +20301,8 @@ you should change your path so that a 64 bit version of Python runs instead
 of the 32 bit version.
 """)
             _exit()
+
+def check_pythonw():
     if 'w' in os.path.basename(os.path.normpath(sys.executable)):
         print("""
 It looks like you're running this file using pythonw, which runs with no input
@@ -20335,9 +20337,10 @@ def ensure_pip():
         import pip
     except ImportError:
         print_intro()
-        check_executable()
+        check_pythonw()
         check_safe_path()
         if not has_elevated_privileges: elevate()
+        check_executable()
 
         print("""
 The module pip is required to install other modules, and the version of Python
@@ -20382,9 +20385,10 @@ pip install error fixed!""")
         exec(import_code_object)
     except ImportError:
         print_intro()
-        check_executable()
+        check_pythonw()
         check_safe_path()
         if not has_elevated_privileges: elevate()
+        check_executable()
 
         print("""
 It looks like the module '%s' isn't installed on Python %s.""" %
