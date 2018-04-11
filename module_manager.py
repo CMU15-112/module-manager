@@ -20414,10 +20414,11 @@ running the line
 
 in %s to make sure pip is installed properly.
 """ %
-("" if sys.platform == 'win32' else "sudo",
+("" if sys.platform == 'win32' else "sudo ",
 sys.executable,
 manager_path,
 shell_name))
+            _exit()
 
         if pip_error:
             #This isn't clean at all, but it works for now
