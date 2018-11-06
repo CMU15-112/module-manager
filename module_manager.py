@@ -1,7 +1,7 @@
 # module_manager.py: Troubleshooting the installation and importing of Python
 # modules
 # By Austin Schick
-# Last update: 3-Apr-2018
+# Last update: 7-Nov-2018
 
 # Note: This code includes a modified version of get_pip.py which can be
 # found at
@@ -20137,13 +20137,10 @@ class capture_output(object):
         sys.stderr = self.stderr
 
 def _exit():
-    if sys.flags.interactive:
-        try:
-            exit()
-            sys.exit()
-        except:
-            os._exit(0)
-    else: sys.exit()
+    try:
+        sys.exit()
+    except:
+        os._exit(0)
 
 def elevate():
     if sys.platform == 'win32':
