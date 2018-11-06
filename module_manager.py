@@ -20334,7 +20334,10 @@ def ensure_pip():
     # Make sure pip is installed before anything else. If it's not, install it
     # and quit
     try:
-        import pip
+        try:
+            from pip import main as pip_main
+        except:
+            from pip._internal import main as pip_main
     except ImportError:
         print_intro()
         check_pythonw()
@@ -20367,7 +20370,10 @@ Rerun your file in your original window to continue.""")
 
 def ensure_install(package_name):
     try:
-        import pip
+        try:
+            from pip import main as pip_main
+        except:
+            from pip._internal import main as pip_main
     except ImportError:
         print("""
 It looks like you indicated that pip installed successfully even though an
@@ -20404,7 +20410,7 @@ It looks like the module '%s' isn't installed on Python %s.""" %
               (package_name, python_version))
 
         try:
-            pip_error = (pip.main(['install', pip_install_name]) != 0)
+            pip_error = (pip_main(['install', pip_install_name]) != 0)
         except:
             print("""
 It looks we were able to import pip, but not use it to install modules. Try
@@ -20423,7 +20429,7 @@ shell_name))
         if pip_error:
             #This isn't clean at all, but it works for now
             with capture_output() as pip_output:
-                (pip.main(['install', pip_install_name]) != 0)
+                (pip_main(['install', pip_install_name]) != 0)
 
             if "No matching distribution found for" in pip_output[0]:
                 if " opencv " in pip_output[0].lower():
@@ -20573,6 +20579,17 @@ def ignore_module(package_name):
 
 #Get a list of modules imported into the caller function
 def review():
+    if os.path.isdir(self_path):
+        print("""
+Hi! To use module manager, make sure that this file is in the same directory
+as your main project file, import it at the top of your file like this:
+
+import module_manager
+module_manager.review()
+
+and then run your main file as normal!""")
+        _exit()
+
     ensure_pip()
     self_code = ""
     with open(self_path, 'r') as f:
