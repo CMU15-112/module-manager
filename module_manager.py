@@ -20487,6 +20487,11 @@ to Python %s. However, pip is now behaving as if it installed the module
 successfully. Try running your file again as usual to see if the install
 was successful.""" %
 (package_name, python_version))
+            elif package_name == 'pygame' and python_version.split('.')[1] == 8:
+                print("""
+Pypi is currently missing some PyGame wheels for Python 3.8. We recommend
+downloading Python 3.7 from python.org and redownloading PyGame tere.
+""")
             else:
                 if package_name in troubleshooting_links:
                     link_tip = ("""
